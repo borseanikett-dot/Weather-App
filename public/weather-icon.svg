@@ -1,0 +1,30 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#3B82F6" stroke="#1E40AF" stroke-width="32"/>
+  
+  <!-- Sun -->
+  <circle cx="256" cy="180" r="60" fill="#FBBF24"/>
+  
+  <!-- Sun rays -->
+  <line x1="256" y1="80" x2="256" y2="120" stroke="#FBBF24" stroke-width="8" stroke-linecap="round"/>
+  <line x1="256" y1="240" x2="256" y2="280" stroke="#FBBF24" stroke-width="8" stroke-linecap="round"/>
+  <line x1="176" y1="180" x2="216" y2="180" stroke="#FBBF24" stroke-width="8" stroke-linecap="round"/>
+  <line x1="296" y1="180" x2="336" y2="180" stroke="#FBBF24" stroke-width="8" stroke-linecap="round"/>
+  <line x1="200" y1="120" x2="220" y2="140" stroke="#FBBF24" stroke-width="8" stroke-linecap="round"/>
+  <line x1="292" y1="120" x2="312" y2="140" stroke="#FBBF24" stroke-width="8" stroke-linecap="round"/>
+  <line x1="200" y1="240" x2="220" y2="220" stroke="#FBBF24" stroke-width="8" stroke-linecap="round"/>
+  <line x1="292" y1="240" x2="312" y2="220" stroke="#FBBF24" stroke-width="8" stroke-linecap="round"/>
+  
+  <!-- Cloud -->
+  <path d="M180 320 C 160 320, 140 340, 140 360 C 140 380, 160 400, 180 400 L 332 400 C 352 400, 372 380, 372 360 C 372 340, 352 320, 332 320 C 332 300, 312 280, 292 280 C 272 280, 252 300, 252 320 Z" fill="#E5E7EB"/>
+  
+  <!-- Rain drops -->
+  <line x1="200" y1="380" x2="200" y2="420" stroke="#60A5FA" stroke-width="4" stroke-linecap="round"/>
+  <line x1="220" y1="370" x2="220" y2="410" stroke="#60A5FA" stroke-width="4" stroke-linecap="round"/>
+  <line x1="240" y1="375" x2="240" y2="415" stroke="#60A5FA" stroke-width="4" stroke-linecap="round"/>
+  <line x1="260" y1="365" x2="260" y2="405" stroke="#60A5FA" stroke-width="4" stroke-linecap="round"/>
+  <line x1="280" y1="370" x2="280" y2="410" stroke="#60A5FA" stroke-width="4" stroke-linecap="round"/>
+  <line x1="300" y1="375" x2="300" y2="415" stroke="#60A5FA" stroke-width="4" stroke-linecap="round"/>
+  <line x1="320" y1="365" x2="320" y2="405" stroke="#60A5FA" stroke-width="4" stroke-linecap="round"/>
+  <line x1="340" y1="370" x2="340" y2="410" stroke="#60A5FA" stroke-width="4" stroke-linecap="round"/>
+</svg>
