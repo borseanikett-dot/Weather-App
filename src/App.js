@@ -75,49 +75,23 @@ function App() {
       
       console.log('Fetching weather for:', cityName);
       
-      // Check if API key is valid (add new key to this list if it doesn't work)
-      if (API_KEY === 'YOUR_NEW_API_KEY_HERE' || API_KEY === 'f7185f4f5fca996437e4ca15cdfce11d' || API_KEY === '2b79118bfb10aad8db828f6a7290c921') {
-        // Use demo data for now
-        console.log('Using demo data - API key not configured');
-        
-        const demoWeather = {
-          name: cityName,
-          sys: { country: "US" },
-          dt: Math.floor(Date.now() / 1000),
-          weather: [{ 
-            icon: "01d", 
-            description: "clear sky" 
-          }],
-          main: { 
-            temp: Math.floor(Math.random() * 15) + 15, 
-            feels_like: Math.floor(Math.random() * 15) + 17, 
-            humidity: Math.floor(Math.random() * 40) + 40, 
-            pressure: Math.floor(Math.random() * 50) + 1000 
-          },
-          wind: { speed: Math.random() * 5 + 1 }
-        };
-        
-        const demoForecast = [
-          { dt: Math.floor(Date.now() / 1000) + 86400, weather: [{ icon: "02d", description: "few clouds" }], main: { temp: Math.floor(Math.random() * 15) + 15 } },
-          { dt: Math.floor(Date.now() / 1000) + 172800, weather: [{ icon: "10d", description: "light rain" }], main: { temp: Math.floor(Math.random() * 15) + 13 } },
-          { dt: Math.floor(Date.now() / 1000) + 259200, weather: [{ icon: "03d", description: "scattered clouds" }], main: { temp: Math.floor(Math.random() * 15) + 16 } },
-          { dt: Math.floor(Date.now() / 1000) + 345600, weather: [{ icon: "01d", description: "clear sky" }], main: { temp: Math.floor(Math.random() * 15) + 18 } },
-          { dt: Math.floor(Date.now() / 1000) + 432000, weather: [{ icon: "04d", description: "broken clouds" }], main: { temp: Math.floor(Math.random() * 15) + 17 } }
-        ];
-        
-        setWeather(demoWeather);
-        setForecast(demoForecast);
-        return;
-      }
-      
       // Use real API
       const weatherUrl = `${API_BASE_URL}/weather?q=${cityName}&appid=${API_KEY}&units=metric`;
       const weatherResponse = await fetch(weatherUrl);
       
       if (!weatherResponse.ok) {
-        const errorText = await weatherResponse.text();
-        console.error('API Error Response:', errorText);
-        throw new Error(`Weather API error: ${weatherResponse.status} - ${errorText}`);
+        const errorData = await weatherResponse.json();
+        console.error('API Error Response:', errorData);
+        
+        if (weatherResponse.status === 404) {
+          throw new Error(`City "${cityName}" not found. Please check the spelling and try again.`);
+        } else if (weatherResponse.status === 401) {
+          throw new Error('Invalid API key. Please check your OpenWeatherMap API configuration.');
+        } else if (weatherResponse.status === 429) {
+          throw new Error('API rate limit exceeded. Please try again later.');
+        } else {
+          throw new Error(`Weather service error: ${weatherResponse.status}. Please try again.`);
+        }
       }
       
       const weatherData = await weatherResponse.json();
@@ -128,9 +102,9 @@ function App() {
       const forecastResponse = await fetch(forecastUrl);
       
       if (!forecastResponse.ok) {
-        const errorText = await forecastResponse.text();
-        console.error('Forecast API Error Response:', errorText);
-        throw new Error(`Forecast API error: ${forecastResponse.status} - ${errorText}`);
+        const errorData = await forecastResponse.json();
+        console.error('Forecast API Error Response:', errorData);
+        throw new Error(`Forecast service error: ${forecastResponse.status}. Weather data loaded but forecast unavailable.`);
       }
       
       const forecastData = await forecastResponse.json();
@@ -140,7 +114,7 @@ function App() {
       setForecast(forecastData.list.slice(0, 5));
     } catch (err) {
       console.error('Full error details:', err);
-      setError(`Error: ${err.message || 'City not found. Please try again.'}`);
+      setError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -150,6 +124,12 @@ function App() {
     e.preventDefault();
     if (city.trim()) {
       fetchWeatherByCity(city.trim());
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !loading && city.trim()) {
+      handleSearch(e);
     }
   };
 
@@ -173,43 +153,89 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-weather-blue to-weather-dark-blue">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.05%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+      
+      <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-            Weather App
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-lg rounded-full mb-6 animate-pulse">
+            <span className="text-4xl">🌤️</span>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-bold text-white mb-4 bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+            WeatherApp
           </h1>
-          <p className="text-xl text-blue-100">
-            Stay updated with current weather and forecasts
+          <p className="text-xl text-blue-100 max-w-2xl mx-auto leading-relaxed">
+            Discover real-time weather conditions and detailed forecasts for any location worldwide
           </p>
         </div>
 
         {/* Search Bar */}
-        <div className="max-w-md mx-auto mb-8">
-          <form onSubmit={handleSearch} className="flex gap-2">
-            <input
-              type="text"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              placeholder="Enter city name..."
-              className="flex-1 px-4 py-3 rounded-lg border-0 focus:ring-2 focus:ring-weather-light-blue focus:outline-none"
-            />
+        <div className="max-w-lg mx-auto mb-12">
+          <form onSubmit={handleSearch} className="relative">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Search for any city..."
+                className="w-full pl-12 pr-4 py-4 rounded-2xl border-0 bg-white/10 backdrop-blur-lg text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 focus:outline-none focus:bg-white/20 transition-all duration-300 text-lg"
+                aria-label="City search input"
+                aria-describedby="search-help"
+                autoComplete="off"
+                spellCheck="false"
+              />
+            </div>
             <button
               type="submit"
-              disabled={loading}
-              className="px-6 py-3 bg-white text-weather-blue font-semibold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+              disabled={loading || !city.trim()}
+              className="absolute right-2 top-2 bottom-2 px-6 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 active:scale-95"
+              aria-label={loading ? "Searching for weather data" : "Search for weather"}
             >
-              {loading ? 'Searching...' : 'Search'}
+              {loading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  <span className="hidden sm:inline">Searching...</span>
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <span className="hidden sm:inline">Search</span>
+                </div>
+              )}
             </button>
           </form>
+          <p id="search-help" className="text-blue-200 text-sm mt-3 text-center">
+            Press Enter or click search to find weather information
+          </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="max-w-md mx-auto mb-6">
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
-              {error}
+          <div className="max-w-lg mx-auto mb-8">
+            <div className="bg-red-500/20 backdrop-blur-lg border border-red-400/30 text-red-100 px-6 py-4 rounded-2xl flex items-center animate-pulse">
+              <svg className="h-6 w-6 text-red-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-medium flex-1">{error}</span>
+              <button
+                onClick={() => setError('')}
+                className="ml-3 text-red-300 hover:text-red-100 transition-colors"
+                aria-label="Dismiss error message"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           </div>
         )}
@@ -217,19 +243,41 @@ function App() {
         {/* Welcome Message */}
         {!weather && !loading && (
           <div className="max-w-4xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 md:p-8 mb-8">
+            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 md:p-12 mb-12 border border-white/20 shadow-2xl">
               <div className="text-center">
-                <div className="text-6xl mb-4">🌤️</div>
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                <div className="text-8xl mb-8 animate-bounce">🌤️</div>
+                <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
                   Welcome to WeatherApp
                 </h2>
-                <p className="text-xl text-blue-100 mb-6">
-                  Search for any city to get current weather and 5-day forecast
+                <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto leading-relaxed">
+                  Get instant access to accurate weather information and detailed forecasts for any location around the world
                 </p>
-                <div className="text-blue-200">
-                  <p>• Real-time weather data</p>
-                  <p>• 5-day weather forecast</p>
-                  <p>• Location-based weather (with permission)</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-blue-200">
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                      <svg className="h-6 w-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <span className="font-medium">Real-time Data</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                      <svg className="h-6 w-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <span className="font-medium">5-Day Forecast</span>
+                  </div>
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                      <svg className="h-6 w-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <span className="font-medium">Location Based</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -238,55 +286,90 @@ function App() {
 
         {/* Current Weather */}
         {weather && (
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 md:p-8 mb-8">
+          <div className="max-w-5xl mx-auto">
+            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 md:p-12 mb-12 border border-white/20 shadow-2xl transform transition-all duration-500 hover:scale-[1.02]">
               <div className="text-center">
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">
-                  {weather.name}, {weather.sys.country}
-                </h2>
-                <p className="text-blue-100 mb-6">
+                <div className="flex items-center justify-center mb-6">
+                  <svg className="h-6 w-6 text-blue-300 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  <h2 className="text-3xl md:text-4xl font-bold text-white bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+                    {weather.name}, {weather.sys.country}
+                  </h2>
+                </div>
+                <p className="text-blue-100 mb-8 text-lg">
                   {formatDate(weather.dt)} • {formatTime(weather.dt)}
                 </p>
                 
-                <div className="flex items-center justify-center mb-6">
-                  <img
-                    src={getWeatherIcon(weather.weather[0].icon)}
-                    alt={weather.weather[0].description}
-                    className="w-24 h-24"
-                  />
-                  <div className="ml-4">
-                    <div className="text-6xl md:text-8xl font-bold text-white">
+                <div className="flex flex-col md:flex-row items-center justify-center mb-8 space-y-6 md:space-y-0 md:space-x-8">
+                  <div className="relative">
+                    <img
+                      src={getWeatherIcon(weather.weather[0].icon)}
+                      alt={weather.weather[0].description}
+                      className="w-32 h-32 md:w-40 md:h-40 drop-shadow-2xl animate-pulse"
+                    />
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center">
+                      <span className="text-lg">☀️</span>
+                    </div>
+                  </div>
+                  <div className="text-center md:text-left">
+                    <div className="text-8xl md:text-9xl font-bold text-white mb-2 bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
                       {Math.round(weather.main.temp)}°
                     </div>
-                    <div className="text-xl text-blue-100 capitalize">
+                    <div className="text-2xl text-blue-100 capitalize font-medium">
                       {weather.weather[0].description}
+                    </div>
+                    <div className="text-lg text-blue-200 mt-2">
+                      Feels like {Math.round(weather.main.feels_like)}°
                     </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white/20 rounded-lg p-4">
-                    <div className="text-blue-100 text-sm">Feels Like</div>
-                    <div className="text-2xl font-bold text-white">
-                      {Math.round(weather.main.feels_like)}°
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                  <div className="bg-white/20 backdrop-blur-lg rounded-2xl p-6 border border-white/20 transform transition-all duration-300 hover:scale-105 hover:bg-white/30">
+                    <div className="flex items-center justify-center mb-3">
+                      <svg className="h-6 w-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                      </svg>
                     </div>
-                  </div>
-                  <div className="bg-white/20 rounded-lg p-4">
-                    <div className="text-blue-100 text-sm">Humidity</div>
-                    <div className="text-2xl font-bold text-white">
+                    <div className="text-blue-100 text-sm font-medium mb-1">Humidity</div>
+                    <div className="text-3xl font-bold text-white">
                       {weather.main.humidity}%
                     </div>
                   </div>
-                  <div className="bg-white/20 rounded-lg p-4">
-                    <div className="text-blue-100 text-sm">Wind Speed</div>
-                    <div className="text-2xl font-bold text-white">
-                      {weather.wind.speed} m/s
+                  <div className="bg-white/20 backdrop-blur-lg rounded-2xl p-6 border border-white/20 transform transition-all duration-300 hover:scale-105 hover:bg-white/30">
+                    <div className="flex items-center justify-center mb-3">
+                      <svg className="h-6 w-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                      </svg>
+                    </div>
+                    <div className="text-blue-100 text-sm font-medium mb-1">Wind Speed</div>
+                    <div className="text-xl font-bold text-white">
+                      {Math.round(weather.wind.speed * 10) / 10}
+                    </div>
+                    <div className="text-blue-200 text-xs">m/s</div>
+                  </div>
+                  <div className="bg-white/20 backdrop-blur-lg rounded-2xl p-6 border border-white/20 transform transition-all duration-300 hover:scale-105 hover:bg-white/30">
+                    <div className="flex items-center justify-center mb-3">
+                      <svg className="h-6 w-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <div className="text-blue-100 text-sm font-medium mb-1">Pressure</div>
+                    <div className="text-3xl font-bold text-white">
+                      {weather.main.pressure} hPa
                     </div>
                   </div>
-                  <div className="bg-white/20 rounded-lg p-4">
-                    <div className="text-blue-100 text-sm">Pressure</div>
-                    <div className="text-2xl font-bold text-white">
-                      {weather.main.pressure} hPa
+                  <div className="bg-white/20 backdrop-blur-lg rounded-2xl p-6 border border-white/20 transform transition-all duration-300 hover:scale-105 hover:bg-white/30">
+                    <div className="flex items-center justify-center mb-3">
+                      <svg className="h-6 w-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    </div>
+                    <div className="text-blue-100 text-sm font-medium mb-1">Feels Like</div>
+                    <div className="text-3xl font-bold text-white">
+                      {Math.round(weather.main.feels_like)}°
                     </div>
                   </div>
                 </div>
@@ -294,28 +377,35 @@ function App() {
             </div>
 
             {/* 5-Day Forecast */}
-            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-6">
-              <h3 className="text-2xl font-bold text-white mb-6 text-center">
-                5-Day Forecast
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl">
+              <div className="flex items-center justify-center mb-8">
+                <svg className="h-8 w-8 text-blue-300 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <h3 className="text-3xl font-bold text-white bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
+                  5-Day Forecast
+                </h3>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 {forecast.map((item, index) => (
-                  <div key={index} className="bg-white/20 rounded-lg p-4 text-center">
-                    <div className="text-blue-100 text-sm mb-2">
+                  <div key={index} className="bg-white/20 backdrop-blur-lg rounded-2xl p-6 text-center border border-white/20 transform transition-all duration-300 hover:scale-105 hover:bg-white/30 group">
+                    <div className="text-blue-100 text-sm font-medium mb-3">
                       {formatDate(item.dt)}
                     </div>
-                    <div className="text-blue-100 text-xs mb-2">
+                    <div className="text-blue-200 text-xs mb-4">
                       {formatTime(item.dt)}
                     </div>
-                    <img
-                      src={getWeatherIcon(item.weather[0].icon)}
-                      alt={item.weather[0].description}
-                      className="w-12 h-12 mx-auto mb-2"
-                    />
-                    <div className="text-white font-bold text-lg">
+                    <div className="mb-4">
+                      <img
+                        src={getWeatherIcon(item.weather[0].icon)}
+                        alt={item.weather[0].description}
+                        className="w-16 h-16 mx-auto drop-shadow-lg group-hover:scale-110 transition-transform duration-300"
+                      />
+                    </div>
+                    <div className="text-white font-bold text-2xl mb-2">
                       {Math.round(item.main.temp)}°
                     </div>
-                    <div className="text-blue-100 text-xs capitalize">
+                    <div className="text-blue-100 text-sm capitalize font-medium">
                       {item.weather[0].description}
                     </div>
                   </div>
@@ -327,16 +417,34 @@ function App() {
 
         {/* Loading State */}
         {loading && (
-          <div className="text-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-            <p className="text-white mt-4">Loading weather data...</p>
+          <div className="text-center py-16">
+            <div className="inline-flex flex-col items-center space-y-6">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-blue-200/30 border-t-blue-400 rounded-full animate-spin"></div>
+                <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-r-blue-300 rounded-full animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}}></div>
+              </div>
+              <div className="text-white text-xl font-medium">Loading weather data...</div>
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Footer */}
-        <div className="text-center mt-12">
-          <p className="text-blue-100">
-            Built with React • Powered by OpenWeatherMap API
+        <div className="text-center mt-16 pt-8 border-t border-white/20">
+          <div className="flex items-center justify-center space-x-2 text-blue-100 mb-4">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            <span className="font-medium">Built with React</span>
+            <span>•</span>
+            <span>Powered by OpenWeatherMap API</span>
+          </div>
+          <p className="text-blue-200 text-sm">
+            © 2025 WeatherApp - Your trusted weather companion by Aniket
           </p>
         </div>
       </div>
